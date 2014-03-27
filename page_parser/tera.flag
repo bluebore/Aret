@@ -1,0 +1,31 @@
+
+# common
+--log_dir=./
+--v=6
+--tera_asyncwriter_enabled=true
+--tera_asyncwriter_pending_limit=20000
+--tera_asyncwriter_sync_interval=10
+--tera_asyncwriter_sync_task_threshold=10000
+--tera_asyncwriter_sync_record_threshold=10000
+--tera_leveldb_env_type=hdfs
+--tera_tabletnode_path_prefix=/user/tera/stable/
+--tera_master_split_tablet_size=64
+
+# master
+
+--tera_master_port=11000
+
+# tablet node
+
+--tera_tabletnode_port=22000
+--tera_sdk_write_sync=true
+
+# zk 
+
+--tera_zk_enabled=true
+--tera_zk_addr_list=db-stest-zk0.db01.baidu.com:3000
+--tera_zk_root_path=/sandbox/aret/tera
+--tera_zk_timeout=10000
+
+#sdk
+--tera_sdk_sacn_buffer_limit=512000
