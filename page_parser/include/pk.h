@@ -4,12 +4,10 @@
  * 
  **************************************************************************/
  
- 
- 
 /**
  * @file parse_keyword.h
  * @author shichengyi(com@baidu.com)
- * @date 2014/03/26 22:24:13
+ * @date 2014/03/27 00:56:43
  * @brief 
  *  
  **/
@@ -17,13 +15,36 @@
 #ifndef  __PARSE_KEYWORD_H_
 #define  __PARSE_KEYWORD_H_
 
+#include <pthread.h>
+#include <boost/noncopyable.hpp>
 
 namespace pk
 {
 
-std::vector<std::string> parse(const std::string& html);
+class ParseKeyword : boost::noncopyable {
+ public:
+  static ParseKeyword& instance();
 
-} 
+  static void init();
+
+  void parse_keyword(const std::string& html, 
+                     std::vector<std::string>& vs);
+
+  void parse_title(const std::string& html, 
+                   std::string& title);
+
+ private:
+  ParseKeyword();
+
+ private:
+  static pthread_once_t _ponce;
+  static ParseKeyword* _value;
+
+  boost::regex _regex_keyword;
+  boost::regex _regex_title;
+};
+
+}
 
 #endif  //__PARSE_KEYWORD_H_
 
