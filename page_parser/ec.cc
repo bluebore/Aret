@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     //record["anchor:www.hao123.com/"][time(NULL)] = "°Ù¶È";
     //table->Write("com.baidu.www/", record);
     // Scan
-    std::string last_key = "";
+    std::string last_key = argv[1];
     while(1) {
         TableSlice slice;
         table->Scan(last_key, "~", &slice);
@@ -59,7 +59,10 @@ int main(int argc, char* argv[]) {
             if (!page.empty()) {
                 std::string& html = page.begin()->second;
                 int64_t ts = page.begin()->first;
-                std::vector<std::string> kws = pk::parse(html);
+                std::vector<std::string> kws;
+                std::string title;
+                pk::parse_keyword(html, kws);
+                pk::parse_title(html, title);
                 //kws.push_back("haha");
                 //printf("Page: \%s\n", html.c_str());
                 for (size_t i=0; i < kws.size(); i++) {
@@ -69,6 +72,7 @@ int main(int argc, char* argv[]) {
                     std::string tag_key =oss.str();
                     Record x;
                     x["url"][0] = row_key;
+                    x["title"][0] = title;
                     tag_table->Write(tag_key, x);
                 }
             }

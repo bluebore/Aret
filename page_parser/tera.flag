@@ -18,7 +18,7 @@
 # tablet node
 
 --tera_tabletnode_port=22000
---tera_sdk_write_sync=true
+--tera_sdk_write_sync=false
 
 # zk 
 
