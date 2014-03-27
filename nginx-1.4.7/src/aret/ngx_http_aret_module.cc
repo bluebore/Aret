@@ -106,10 +106,11 @@ static ngx_int_t ngx_http_recommend_handler(ngx_http_request_t *r)
     {
         Record& record= it->second;
         const std::string url = record["url"].begin()->second;
+        const std::string title = record["title"].begin()->second;
         content.append("<a href=view?url=");
         content.append(url);
         content.append(">");
-        content.append(url);
+        content.append(title);
         content.append("</a><br/>");
         if (++num > 10)
             break;
