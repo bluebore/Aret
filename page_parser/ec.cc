@@ -59,7 +59,8 @@ int main(int argc, char* argv[]) {
             if (!page.empty()) {
                 std::string& html = page.begin()->second;
                 int64_t ts = page.begin()->first;
-                std::vector<std::string> kws = pk::parse(html);
+                std::vector<std::string> kws;
+                pk::parse_keyword(html, kws);
                 //kws.push_back("haha");
                 //printf("Page: \%s\n", html.c_str());
                 for (size_t i=0; i < kws.size(); i++) {
