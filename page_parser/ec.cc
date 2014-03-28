@@ -14,6 +14,7 @@
 
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <sys/time.h>
 
 #include "pk.h"
@@ -60,6 +61,8 @@ int main(int argc, char* argv[]) {
                 std::string& html = page.begin()->second;
                 int64_t ts = page.begin()->first;
                 std::vector<std::string> kws;
+                std::sort(kws.begin(), kws.end());
+                std::unique(kws.begin(), kws.end());
                 std::string title;
                 pk::parse_keyword(html, kws);
                 pk::parse_title(html, title);
