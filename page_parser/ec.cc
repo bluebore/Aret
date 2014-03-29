@@ -35,7 +35,7 @@ static inline long get_micros() {
 int main(int argc, char* argv[]) {
     // Open
     Table* table = teraeasy::OpenTable("WebTable");
-    Table* tag_table = teraeasy::OpenTable("TestTagTable");
+    Table* tag_table = teraeasy::OpenTable("TagTable");
     // Insert
     Record record;
     //table->Write("com.baidu.www/", record);
@@ -45,8 +45,9 @@ int main(int argc, char* argv[]) {
     //record["anchor:www.hao123.com/"][time(NULL)] = "°Ù¶È";
     //table->Write("com.baidu.www/", record);
     // Scan
-    std::string last_key = argv[1];
-    while(1) {
+    std::string last_key = (argc > 1) ? argv[1] : "";
+    std::string end_key = (argc > 2) ? argv[2] : "";
+    while(last_key != "" || last_key <= end_key) {
         TableSlice slice;
         table->Scan(last_key, "~", &slice);
         if (slice.empty()) {
@@ -54,16 +55,27 @@ int main(int argc, char* argv[]) {
         }
         for (TableSlice::iterator it = slice.begin(); it != slice.end(); ++it) {
             const Key& row_key = it->first;
+            last_key = row_key+'\0';
             Record& record= it->second;
             printf("Row key is %s\n", row_key.c_str());
+            if (row_key.find("2014") == std::string::npos) {
+                continue;
+            }
             Column& page = record["page"];
+            //Column& title_c = record["title"];
             if (!page.empty()) {
                 std::string& html = page.begin()->second;
+                std::string code = "content=\"text/html; charset=utf-8\" />";
+                size_t pos = html.find(code);
+                if (pos != std::string::npos) {
+                    html.replace(pos, code.size(), "");
+                }
+
                 int64_t ts = page.begin()->first;
                 std::vector<std::string> kws;
                 std::sort(kws.begin(), kws.end());
                 std::unique(kws.begin(), kws.end());
-                std::string title;
+                std::string title;// = title_c.begin()->second;
                 pk::parse_keyword(html, kws);
                 pk::parse_title(html, title);
                 //kws.push_back("haha");
@@ -77,9 +89,10 @@ int main(int argc, char* argv[]) {
                     x["url"][0] = row_key;
                     x["title"][0] = title;
                     tag_table->Write(tag_key, x);
+                    record["tag"][i] = kws[i];
                 }
+                table->Write(row_key, record);
             }
-            last_key = row_key+'\0';
         }
     }
     // Close
