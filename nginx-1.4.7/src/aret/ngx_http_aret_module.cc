@@ -13,7 +13,11 @@ extern "C" {
 #include <ngx_http.h>
 }
 
+#include "re_engine.h"
+
 #include "tera_easy.h"
+
+aret::ReEngine g_re_engine;
 
 using namespace teraeasy;
 /// 推荐的参数
@@ -84,7 +88,6 @@ static char* str_to_buf(ngx_pool_t* pool, const std::string& str)
 /// Handler
 static ngx_int_t ngx_http_recommend_handler(ngx_http_request_t *r)
 {
-    static std::string last_key = "";
     ngx_int_t rc;
     ngx_buf_t *b;
     ngx_chain_t out;
@@ -96,30 +99,27 @@ static ngx_int_t ngx_http_recommend_handler(ngx_http_request_t *r)
     }
 
     // 从TagTable选一段作为推荐内容
-    Table* tag_table =  OpenTable("TestTagTable");
-    TableSlice slice;
-    tag_table->Scan(last_key, "~", &slice);
+    std::vector<std::string> urls;
+    std::vector<std::string> titles;
+    std::vector<std::string> tags;
+    std::string err;
     std::string content;
-    int num = 0;
-    std::string key;
-    for (TableSlice::iterator it = slice.begin(); it != slice.end(); ++it)
-    {
-        Record& record= it->second;
-        const std::string url = record["url"].begin()->second;
-        const std::string title = record["title"].begin()->second;
-        content.append("<a href=view?url=");
-        content.append(url);
-        content.append(">");
-        content.append(title);
-        content.append("</a><br/>");
-        if (++num > 10)
-            break;
-        key = it->first;
+    if (g_re_engine.GetRecommend("user", 10, &urls, &titles, &tags, &err)) {
+        for (size_t i=0; i<urls.size(); i++)
+        {
+            content.append("<a href=view?url=");
+            content.append(urls[i]);
+            content.append(">");
+            content.append(titles[i]);
+            content.append("</a><br/>");
+            content.append("Tag: ");
+            content.append(tags[i]);
+            content.append("<br/>");
+        }
+    } else {
+        content = "GetRecommend fail~";
     }
-    last_key = key;
-    content.push_back('\0');
-    delete tag_table;
-    char* send_buf = str_to_buf(r->pool, content);
+    char* send_buf = str_to_buf(r->pool, err + content);
 
     r->headers_out.content_type.len = sizeof("text/html") - 1;
     r->headers_out.content_type.data = (u_char *) "text/html";
@@ -153,22 +153,25 @@ static ngx_int_t ngx_http_recommend_handler(ngx_http_request_t *r)
     return ngx_http_output_filter(r, &out);
 }
 
-/// 根据url从网页库获取html
-bool get_html(const std::string& url, std::string *html) {
-    Table* table = teraeasy::OpenTable("WebTable");
-    Record record;
-    if (table->Read(url, &record) && !record.empty())
+static bool parse_args(const char* args, std::string* user, std::string* url) {
+    char userbuf[128];
+    char urlbuf[1024];
+    if (2 == sscanf(args, "user=%s&url=%s", userbuf, urlbuf))
     {
-        Column& page = record["page"];
-        if (!page.empty())
-        {
-            std::string& htmlstr = page.begin()->second;
-            html->assign(htmlstr);
-        }
+        user->assign(userbuf);
+        url->assign(urlbuf);
     }
-    delete table;
-    return !html->empty();
+    else if (1 == sscanf(args, "url=%s", urlbuf))
+    {
+        url->assign(urlbuf);
+    }
+    else
+    {
+        return false;
+    }
+    return true;
 }
+
 /// View Handler
 static ngx_int_t ngx_http_view_handler(ngx_http_request_t *r)
 {
@@ -182,15 +185,18 @@ static ngx_int_t ngx_http_view_handler(ngx_http_request_t *r)
         return NGX_HTTP_NOT_ALLOWED;
     }
     std::string url;
-    if ((r->args.len>4) && strncmp("url=", (char*)r->args.data, 4) == 0) {
-        url.assign((char*)r->args.data + 4, r->args.len - 4);
-    }
+    std::string user;
+    parse_args(reinterpret_cast<const char*>(r->args.data), &user, &url);
+    std::vector<std::string> content;
+    content.push_back(url);
+    std::string err;
+    g_re_engine.RecordActions("user", aret::AT_VIEW, content, &err);
     std::string html;
-    if (url == "" || !get_html(url, &html))
+    if (url == "" || !g_re_engine.GetHtml(url, &html))
     {
         html = "No this page in WebTable";
     }
-    char* send_buf = str_to_buf(r->pool, html);
+    char* send_buf = str_to_buf(r->pool, err + html);
     r->headers_out.content_type.len = sizeof("text/html") - 1;
     r->headers_out.content_type.data = (u_char *) "text/html";
     r->headers_out.status = NGX_HTTP_OK;

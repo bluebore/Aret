@@ -1,6 +1,6 @@
 
 # common
---log_dir=./
+--log_dir=./teralog
 --v=6
 --tera_asyncwriter_enabled=true
 --tera_asyncwriter_pending_limit=20000
